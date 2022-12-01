@@ -44,7 +44,12 @@ public class BrazeDestination: DestinationPlugin {
     public let type = PluginType.destination
     public let key = "Appboy"
     public var analytics: Analytics? = nil
-    var braze: Braze? = nil
+    public var onBrazeUpdate: ((_: Braze?) -> Void)?
+    var braze: Braze? = nil {
+        didSet {
+            onBrazeUpdate?(braze)
+        }
+    }
     
     private var brazeSettings: BrazeSettings?
         
@@ -59,11 +64,14 @@ public class BrazeDestination: DestinationPlugin {
         guard let tempSettings: BrazeSettings = settings.integrationSettings(forPlugin: self) else { return }
         brazeSettings = tempSettings
         
-        var configuration = Braze.Configuration(
+        let configuration = Braze.Configuration(
             apiKey: brazeSettings?.apiKey ?? "",
             endpoint: brazeSettings?.customEndpoint ?? ""
             )
-        configuration.api.addSdkMetadata([Braze.Configuration.Api.SdkMetadata.segment])
+
+        configuration.location.automaticLocationCollection = true
+
+        configuration.api.addSDKMetadata([Braze.Configuration.Api.SDKMetadata.segment])
 
         braze = Braze(configuration: configuration)
     }
@@ -198,6 +206,9 @@ public class BrazeDestination: DestinationPlugin {
                                    quantity: 1)
             }
         }
+
+        braze?.logCustomEvent(name: event.event, properties: event.properties?.dictionaryValue)
+
         return event
     }
 }
